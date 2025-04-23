@@ -1,0 +1,19 @@
+.codehilite {
+    padding: 1rem;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.codehilite pre {
+    margin: 0;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.codehilite .hll { background-color: #ffffcc }
+.codehilite .c { color: #408080; font-style: italic } /* Comment */
+.codehilite .k { color: #008000; font-weight: bold } /* Keyword */
+.codehilite .s { color: #ba2121 } /* String */
+
+.codehilite .o { color: #666666 } /* Operator */
