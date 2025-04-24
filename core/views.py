@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.core.cache import cache
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -132,6 +134,16 @@ class PostView(APIView):
     
 class CommentView(APIView):
     permission_classes = [AllowAny]
+    MAX_COMMENTS_PER_HOUR = 10
+    
+    def _check_rate_limit(self, user_id):
+        cache_key = f"comment_rate_limit:{user_id}"
+        comment_count = cache.get(cache_key, 0)
+        if comment_count >= self.MAX_COMMENTS_PER_HOUR:
+            return False
+        cache.set(cache_key, comment_count + 1, 3600)  # Set cache expiration to 1 hour
+        return True
+
     def get_queryset(self, post_id):
         return Comment.objects.filter(post__id=post_id, is_active=True)
     
@@ -140,7 +152,18 @@ class CommentView(APIView):
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+    @method_decorator(login_required)
+    @transaction.atomic
     def post(self, request, post_id, *args, **kwargs):
+        user_id = request.user.id if request.user.is_authenticated else request.META.get('REMOTE_ADDR')
+        
+        if not self._check_rate_limit(user_id):
+            return Response({"error": "Rate limit exceeded. Please try again later."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        if not request.user.is_authenticated:
+            return Response({"error": "You must be logged in to comment."}, status=status.HTTP_401_UNAUTHORIZED)
+        if not request.data.get('content'):
+            return Response({"error": "Comment content is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             serializer = CommentSerializer(data=request.data)
             if not serializer.is_valid():
@@ -170,3 +193,45 @@ class CommentView(APIView):
             return Response({"integrity error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @method_decorator(login_required)
+    @transaction.atomic
+    def get_comment(self, request, comment_id, *args, **kwargs):
+        try:
+            comment = Comment.objects.get(id=comment_id)
+            serializer = CommentSerializer(comment)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Comment.DoesNotExist:
+            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @method_decorator(login_required)
+    @transaction.atomic
+    def update_comment(self, request, comment_id, *args, **kwargs):
+        try:
+            comment = Comment.objects.get(id=comment_id, author=request.user)
+            serializer = CommentSerializer(comment, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Comment.DoesNotExist:
+            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    @method_decorator(login_required)
+    @transaction.atomic
+    def delete_comment(self, request, comment_id, *args, **kwargs):
+        try:
+            comment = Comment.objects.get(id=comment_id, author=request.user)
+            comment.is_active = False
+            comment.save()
+            return Response({"message": "Comment deleted successfully"}, status=status.HTTP_200_OK)
+        except Comment.DoesNotExist:
+            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    
