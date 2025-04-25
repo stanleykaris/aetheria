@@ -1,6 +1,7 @@
 from django import forms
 from tinymce.widgets import TinyMCE
 from .models import Post, User, Comments
+from django.utils.translation import gettext_lazy as _
 
 class UserForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput())
@@ -61,6 +62,24 @@ class PostForm(forms.ModelForm):
             'content': 'Content',
             'image': 'Image',
         }
+        
+    def makr_post_publish(self, modeladmin, request, queryset):
+        queryset.update(is_active=True)
+        
+    def makr_post_draft(self, modeladmin, request, queryset):
+        queryset.update(is_active=False)
+    
+    def close_post_commentstatus(self, modeladmin, request, queryset):
+        queryset.update(is_active=False)
+    
+    def open_post_commentstatus(self, modeladmin, request, queryset):
+        queryset.update(is_active=True)
+        
+    makr_post_publish.short_description = _('Publish selected posts')
+    makr_post_draft.short_description = _('Draft selected posts')
+    close_post_commentstatus.short_description = _('Close comment status for selected posts')
+    open_post_commentstatus.short_description = _('Open comment status for selected posts')
+    
         
 class CommentForm(forms.ModelForm):
     class Meta:

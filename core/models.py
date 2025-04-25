@@ -77,8 +77,19 @@ class Categories(models.Model):
     category_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(max_length=500, blank=True)
+    slug = models.SlugField(default='no-slug', max_length=60, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    index = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-index']
+        verbose_name_plural = 'Categories'
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = self.name.lower().replace(' ', '-')
+        super(Categories, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
