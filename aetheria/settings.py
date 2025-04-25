@@ -113,6 +113,38 @@ USE_I18N = True
 
 USE_TZ = True
 
+DEEPL_SOURCE_LANGUAGES = [
+    ('en', 'English'),
+    ('fr', 'French'),
+    ('es', 'Spanish'),
+    ('de', 'German'),
+    ('it', 'Italian'),
+    ('pt', 'Portuguese'),
+    ('nl', 'Dutch'),
+    ('ru', 'Russian'),
+    ('zh', 'Chinese'),
+    ('ja', 'Japanese'),
+    ('ko', 'Korean'),
+    ('ar', 'Arabic'),
+    ('hi', 'Hindi'),
+    ('bn', 'Bengali'),
+    ('tr', 'Turkish'),
+    ('sv', 'Swedish'),
+    ('pl', 'Polish'),
+    ('cs', 'Czech'),
+    ('da', 'Danish'),
+    ('fi', 'Finnish'),
+    ('el', 'Greek'),
+    ('he', 'Hebrew'),
+    ('hu', 'Hungarian'),
+    ('id', 'Indonesian'),
+    ('ms', 'Malay'),
+    ('no', 'Norwegian'),
+    ('th', 'Thai'),
+    ('vi', 'Vietnamese'),
+]
+
+LANGUAGE_BIDI = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

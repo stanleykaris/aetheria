@@ -8,12 +8,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 import markdown
+import logging
 from .models import User, Post, Comment
 from .serializers import PostSerializer, CommentSerializer
 from .forms import PostForm  # Import PostForm from the forms module
 from django.core.exceptions import ValidationError  # Import ValidationError
 from django.db import IntegrityError, transaction  # Import IntegrityError and transaction
-
+from utils.translation import ContentTranslator
 # Create your views here.
 class PostView(APIView):
     permission_classes = [IsAuthenticated] # Allows any user to access this view including guest users
@@ -234,4 +235,51 @@ class CommentView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+class TranslationView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def __init__(self):
+        self.translator = ContentTranslator()
+    
+    @method_decorator(login_required)
+    @transaction.atomic
+    def post(self, request, post_id, *args, **kwargs):
+        try:
+            post = Post.objects.get(id=post_id)
+            target_lang = request.data.get('target_lang')
+            
+            if not target_lang:
+                return Response({"error": "Target language is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            translation_result = self.translator.translate_post(post, target_lang)
+            
+            if "error" in translation_result:
+                return Response({"error": translation_result["error"]}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Post translated successfully"}, status=status.HTTP_200_OK)
+        except Post.DoesNotExist:
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self, request):
+        try:
+            result = self.translator.get_supported_languages()
+        except Exception as e:
+            logging.error(f"Exception occurred while fetching languages: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if "error" in result:
+            logging.error(f"Error fetching languages: {result['error']}")
+            return Response({"error": result["error"]}, status=status.HTTP_400_BAD_REQUEST)
+
+        languages = result.get("languages")
+        if not isinstance(languages, list):
+            logging.error("Invalid languages data")
+            return Response({"error": "Invalid languages data"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not languages:
+            logging.error("No languages found")
+            return Response({"error": "No languages found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"languages": languages}, status=status.HTTP_200_OK)
     
