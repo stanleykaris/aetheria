@@ -13,7 +13,14 @@ class DeepLTranslator:
         if not self.api_key:
             raise ValueError("DEEPL_API_KEY environment variable is not set")
         
-        self.translator = deepl.Translator(self.api_key)
+        # Get the base URL from settings
+        base_url = getattr(settings, 'DEEPL_BASE_URL', None)
+        
+        # Initialize the DeepL translator
+        if base_url:
+            self.translator = deepl.Translator(self.api_key, server_url=base_url)
+        else:
+            self.translator = deepl.Translator(self.api_key)
         
         # Supported language pairs
         self.supported_languages = self._get_supported_languages()

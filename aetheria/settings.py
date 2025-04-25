@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+DEEPL_BASE_URL = "https://api-free.deepl.com/v2"  # Example for the free API
+
 
 # Application definition
 
