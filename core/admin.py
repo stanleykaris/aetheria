@@ -29,6 +29,7 @@ class PostAdmin(admin.ModelAdmin):
     list_per_page = 20
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at', 'updated_at')
+    show_facets = admin.ModelAdmin.show_facets.NEVER
     actions = [
         PostForm.makr_post_publish,
         PostForm.makr_post_draft,
@@ -86,7 +87,7 @@ class CategoriesAdmin(admin.ModelAdmin):
 class CommentsAdmin(admin.ModelAdmin):
     list_display = ['comment_id', 'post', 'author', 'created_at']
     list_select_related = ('author', 'post')
-    list_filter = ['is_active', 'is_draft', 'post']
+    list_filter = ['is_active', 'post']
     search_fields = ['content', 'post', 'author']
     list_per_page = 20
     ordering = ['-created_at']
@@ -95,6 +96,11 @@ class CommentsAdmin(admin.ModelAdmin):
         'makr_comment_publish',
         'makr_comment_draft',
     ]
+    
+    class Meta:
+        model = Comments
+        verbose_name = 'Comment'
+        verbose_name_plural = 'Comments'
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request=request, obj=obj, **kwargs)
