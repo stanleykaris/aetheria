@@ -260,7 +260,9 @@ class TranslationView(APIView):
             return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+    
+    @method_decorator(login_required)
+    @transaction.atomic    
     def get(self, request):
         try:
             result = self.translator.get_supported_languages()
@@ -283,3 +285,49 @@ class TranslationView(APIView):
 
         return Response({"languages": languages}, status=status.HTTP_200_OK)
     
+    @method_decorator(login_required)
+    @transaction.atomic
+    def get_translations(self, request, post_id, *args, **kwargs):
+        try:
+            # Fetch the post by id
+            post = Post.objects.get(id=post_id)
+            
+            # Get the target language from the request
+            target_lang = request.query_params.get('target_lang')
+            if not target_lang:
+                return Response({"error": "Target language is required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Translate the post content
+            translation_result = self.translator.translate_post(post, target_lang)
+            
+            if "error" in translation_result:
+                return Response({"error": translation_result["error"]}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Return the translated content
+            return Response({
+                "message": "Post and comments translated successfully",
+                "translated_post": {
+                    
+                    "title": translation_result["title"],
+                    "content": translation_result["content"],
+                    "markdown_content": post.markdown_content
+                },
+                "translated_comments": translation_result.get("comments", [])
+            }, status=status.HTTP_200_OK)
+        except Post.DoesNotExist:
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logging.error(f"Exception occurred while translating post: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @method_decorator(login_required)
+    @transaction.atomic
+    def get_translation_status(self, request, post_id, *args, **kwargs):
+        try:
+            post = Post.objects.get(id=post_id)
+            translation_status = self.translator.get_translation_status(post)
+            return Response({"translation_status": translation_status}, status=status.HTTP_200_OK)
+        except Post.DoesNotExist:
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
